@@ -3,7 +3,7 @@ Name: DNDMyRecording
 Depends: mobilesubstrate
 Version: 1.0
 Architecture: iphoneos-arm
-Description: Enabled DND when a screen recording is initiated.
+Description: Enable DND when a screen recording is initiated.
 Maintainer: gilshahar7
 Author: gilshahar7
 Section: Tweaks
