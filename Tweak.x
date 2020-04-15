@@ -23,6 +23,21 @@ static BOOL DNDEnabledTemp;
 static BOOL wasRecording;
 static DNDModeAssertionService *assertionService;
 
+static void enableDND(){
+  if (!assertionService) {
+    assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
+  }
+  DNDModeAssertionDetails *newAssertion = [%c(DNDModeAssertionDetails) userRequestedAssertionDetailsWithIdentifier:@"com.apple.control-center.manual-toggle" modeIdentifier:@"com.apple.donotdisturb.mode.default" lifetime:nil];
+  [assertionService takeModeAssertionWithDetails:newAssertion error:NULL];
+}
+
+static void disableDND(){
+  if (!assertionService) {
+    assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
+  }
+  [assertionService invalidateAllActiveModeAssertionsWithError:NULL];
+}
+
 %hook RPControlCenterClient
 -(void)startRecordingWithHandler:(/*^block*/id)arg1{
   %orig;
@@ -31,11 +46,8 @@ static DNDModeAssertionService *assertionService;
   wasRecording = true;
   DNDEnabledTemp = DNDEnabled;
   if(DNDEnabled == false){
-    if (!assertionService) {
-      assertionService = (DNDModeAssertionService *)[objc_getClass("DNDModeAssertionService") serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
-    }
-    DNDModeAssertionDetails *newAssertion = [objc_getClass("DNDModeAssertionDetails") userRequestedAssertionDetailsWithIdentifier:@"com.apple.control-center.manual-toggle" modeIdentifier:@"com.apple.donotdisturb.mode.default" lifetime:nil];
-    [assertionService takeModeAssertionWithDetails:newAssertion error:NULL];
+    //need to enable DND
+    enableDND();
   }
 }
 
@@ -47,10 +59,8 @@ static DNDModeAssertionService *assertionService;
     //recording ended, decide what to do with DND
     wasRecording = false;
     if(DNDEnabledTemp == false){
-      if (!assertionService) {
-        assertionService = (DNDModeAssertionService *)[objc_getClass("DNDModeAssertionService") serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
-      }
-      [assertionService invalidateAllActiveModeAssertionsWithError:NULL];
+      //need to disable DND
+      disableDND();
     }
   }
 }
