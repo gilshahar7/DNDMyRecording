@@ -18,9 +18,12 @@
 @property BOOL recordingOn;
 @end
 
+@interface RPControlCenterModule
+@property RPControlCenterClient* client;
+@end
+
 static BOOL DNDEnabled;
 static BOOL DNDEnabledTemp;
-static BOOL wasRecording;
 static DNDModeAssertionService *assertionService;
 
 static void enableDND(){
@@ -29,6 +32,7 @@ static void enableDND(){
   }
   DNDModeAssertionDetails *newAssertion = [%c(DNDModeAssertionDetails) userRequestedAssertionDetailsWithIdentifier:@"com.apple.control-center.manual-toggle" modeIdentifier:@"com.apple.donotdisturb.mode.default" lifetime:nil];
   [assertionService takeModeAssertionWithDetails:newAssertion error:NULL];
+  
 }
 
 static void disableDND(){
@@ -38,26 +42,27 @@ static void disableDND(){
   [assertionService invalidateAllActiveModeAssertionsWithError:NULL];
 }
 
+
 %hook RPControlCenterClient
 -(void)startRecordingWithHandler:(/*^block*/id)arg1{
   %orig;
   %log;
+  NSLog(@"[RPScreenRecorder]gilshahar7 startRecordingWithHandler");
   //recording started, save the DND state and enable it if needed.
-  wasRecording = true;
   DNDEnabledTemp = DNDEnabled;
   if(DNDEnabled == false){
     //need to enable DND
     enableDND();
   }
 }
+%end
 
--(void)screenRecorderDidUpdateState:(id)arg1{
+
+%hook RPControlCenterModule
+-(void)didStopRecordingOrBroadcast {
   %orig;
-  %log;
-  NSLog(@"[RPScreenRecorder]gilshahar7 screenRecorderDidUpdateState");
-  if(self.recordingOn == NO && wasRecording == YES){
+  if(self.client.recordingOn == NO){
     //recording ended, decide what to do with DND
-    wasRecording = false;
     if(DNDEnabledTemp == false){
       //need to disable DND
       disableDND();

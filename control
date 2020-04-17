@@ -1,7 +1,7 @@
 Package: com.gilshahar7.dndmyrecording
 Name: DNDMyRecording
 Depends: mobilesubstrate
-Version: 1.0
+Version: 1.1
 Architecture: iphoneos-arm
 Description: Enable DND when a screen recording is initiated.
 Maintainer: gilshahar7
