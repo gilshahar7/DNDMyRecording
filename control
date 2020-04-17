@@ -4,6 +4,6 @@ Depends: mobilesubstrate
 Version: 1.1
 Architecture: iphoneos-arm
 Description: Enable DND when a screen recording is initiated.
-Maintainer: gilshahar7
-Author: gilshahar7
+Maintainer: gilshahar7, 0xkuj
+Author: gilshahar7, 0xkuj
 Section: Tweaks
