@@ -1,4 +1,4 @@
-
+#import <Foundation/Foundation.h>
 
 @class DNDModeAssertionLifetime;
 
@@ -57,6 +57,19 @@ static void disableDND(){
 }
 %end
 
+%hook RPControlCenterMenuModuleViewController
+-(void)didStopRecordingOrBroadcast{
+	%orig;
+	
+	if(MSHookIvar<RPControlCenterClient*>(self, "_client").recordingOn == NO){
+		//recording ended, decide what to do with DND
+		if(DNDEnabledTemp == false){
+			//need to disable DND
+			disableDND();
+		}
+	}
+}
+%end
 
 %hook RPControlCenterModule
 -(void)didStopRecordingOrBroadcast {
