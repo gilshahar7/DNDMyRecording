@@ -1,6 +1,8 @@
+FINALPACKAGE = 1
+GO_EASY_ON_ME = 1
 ARCHS = armv7 arm64 arm64e
-export TARGET = iphone:clang:10.3:7.0
 
+TARGET := iphone:clang:latest:7.0
 INSTALL_TARGET_PROCESSES = SpringBoard
 
 include $(THEOS)/makefiles/common.mk
