@@ -14,8 +14,7 @@
 - (id)takeModeAssertionWithDetails:(DNDModeAssertionDetails *)assertionDetails error:(NSError **)error;
 @end
 
-static BOOL DNDEnabled;
-static BOOL DNDPreviouslyEnabled;
+static BOOL DNDPreviouslyEnabled = true;
 static DNDModeAssertionService *assertionService;
 
 static void enableDND(){
@@ -32,28 +31,26 @@ static void disableDND(){
 	[assertionService invalidateAllActiveModeAssertionsWithError:NULL];
 }
 
+static BOOL isDNDEnabled(){
+	id service = MSHookIvar<id>(UIApplication.sharedApplication, "_dndNotificationsService");
+	if(!service) return 0;
+	else return MSHookIvar<BOOL>(service, "_doNotDisturbActive");
+}
+
 %hook RPScreenRecorder
 -(void)setRecording:(BOOL)recording{
 	%orig;
 	
 	if(recording){
 		//If a recording started, store the previous DND state
-		DNDPreviouslyEnabled = DNDEnabled;
+		DNDPreviouslyEnabled = isDNDEnabled();
 		
 		//Enable DND if it isn't already active
-		if(!DNDEnabled) enableDND();
+		if(!isDNDEnabled()) enableDND();
 	} else{
 		//Disable DND if it isn't already disabled, but only disable if DND wasn't already on before the recording started
-		if(!DNDPreviouslyEnabled && DNDEnabled) disableDND();
+		if(!DNDPreviouslyEnabled && isDNDEnabled()) disableDND();
 	}
-}
-%end
-
-%hook DNDState
--(BOOL)isActive {
-	//Save the DND state
-	DNDEnabled = %orig;
-	return DNDEnabled;
 }
 %end
 
