@@ -1,4 +1,4 @@
-#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 @class DNDModeAssertionLifetime;
 
@@ -14,92 +14,55 @@
 - (id)takeModeAssertionWithDetails:(DNDModeAssertionDetails *)assertionDetails error:(NSError **)error;
 @end
 
-@interface RPControlCenterClient
-@property BOOL recordingOn;
-@end
-
-@interface RPControlCenterModule
-@property RPControlCenterClient* client;
-@end
-
 static BOOL DNDEnabled;
-static BOOL DNDEnabledTemp;
+static BOOL DNDPreviouslyEnabled;
 static DNDModeAssertionService *assertionService;
 
 static void enableDND(){
-  if (!assertionService) {
-    assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
-  }
-  DNDModeAssertionDetails *newAssertion = [%c(DNDModeAssertionDetails) userRequestedAssertionDetailsWithIdentifier:@"com.apple.control-center.manual-toggle" modeIdentifier:@"com.apple.donotdisturb.mode.default" lifetime:nil];
-  [assertionService takeModeAssertionWithDetails:newAssertion error:NULL];
-  
+	if (!assertionService) assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
+	
+	DNDModeAssertionDetails *newAssertion = [%c(DNDModeAssertionDetails) userRequestedAssertionDetailsWithIdentifier:@"com.apple.control-center.manual-toggle" modeIdentifier:@"com.apple.donotdisturb.mode.default" lifetime:nil];
+	[assertionService takeModeAssertionWithDetails:newAssertion error:NULL];
+	
 }
 
 static void disableDND(){
-  if (!assertionService) {
-    assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
-  }
-  [assertionService invalidateAllActiveModeAssertionsWithError:NULL];
+	if (!assertionService) assertionService = (DNDModeAssertionService *)[%c(DNDModeAssertionService) serviceForClientIdentifier:@"com.apple.donotdisturb.control-center.module"];
+	
+	[assertionService invalidateAllActiveModeAssertionsWithError:NULL];
 }
 
-
-%hook RPControlCenterClient
--(void)startRecordingWithHandler:(/*^block*/id)arg1{
-  %orig;
-  %log;
-  NSLog(@"[RPScreenRecorder]gilshahar7 startRecordingWithHandler");
-  //recording started, save the DND state and enable it if needed.
-  DNDEnabledTemp = DNDEnabled;
-  if(DNDEnabled == false){
-    //need to enable DND
-    enableDND();
-  }
-}
-%end
-
-%hook RPControlCenterMenuModuleViewController
--(void)didStopRecordingOrBroadcast{
+%hook RPScreenRecorder
+-(void)setRecording:(BOOL)recording{
 	%orig;
 	
-	if(MSHookIvar<RPControlCenterClient*>(self, "_client").recordingOn == NO){
-		//recording ended, decide what to do with DND
-		if(DNDEnabledTemp == false){
-			//need to disable DND
-			disableDND();
-		}
+	if(recording){
+		//If a recording started, store the previous DND state
+		DNDPreviouslyEnabled = DNDEnabled;
+		
+		//Enable DND if it isn't already active
+		if(!DNDEnabled) enableDND();
+	} else{
+		//Disable DND if it isn't already disabled, but only disable if DND wasn't already on before the recording started
+		if(!DNDPreviouslyEnabled && DNDEnabled) disableDND();
 	}
-}
-%end
-
-%hook RPControlCenterModule
--(void)didStopRecordingOrBroadcast {
-  %orig;
-  if(self.client.recordingOn == NO){
-    //recording ended, decide what to do with DND
-    if(DNDEnabledTemp == false){
-      //need to disable DND
-      disableDND();
-    }
-  }
 }
 %end
 
 %hook DNDState
 -(BOOL)isActive {
-  //save the DND state.
+	//Save the DND state
 	DNDEnabled = %orig;
 	return DNDEnabled;
 }
 %end
 
-%ctor
-{
-    if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"])
-    {
-        //load ReplayKitModule bundle so we can hook it
-        NSBundle* moduleBundle = [NSBundle bundleWithPath:@"/System/Library/ControlCenter/Bundles/ReplayKitModule.bundle"];
-        if (!moduleBundle.loaded)
-            [moduleBundle load];
-        %init;
-    }
+%ctor{
+	if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+		//Load ReplayKitModule bundle so we can hook it
+		NSBundle* moduleBundle = [NSBundle bundleWithPath:@"/System/Library/ControlCenter/Bundles/ReplayKitModule.bundle"];
+		if (!moduleBundle.loaded) [moduleBundle load];
+		
+		%init;
+	}
 }
