@@ -31,10 +31,15 @@ static void disableDND(){
 	[assertionService invalidateAllActiveModeAssertionsWithError:NULL];
 }
 
-static BOOL isDNDEnabled(){
+static BOOL isDNDEnabled() {
 	id service = MSHookIvar<id>(UIApplication.sharedApplication, "_dndNotificationsService");
-	if(!service) return 0;
-	else return MSHookIvar<BOOL>(service, "_doNotDisturbActive");
+	if(!service) {
+		return 0;
+	}
+	else {
+		id state = MSHookIvar<id>(service, "_currentState");
+		return [state isActive];
+	}
 }
 
 %hook RPScreenRecorder
